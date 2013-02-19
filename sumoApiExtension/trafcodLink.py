@@ -8,7 +8,7 @@ class for managing connection to trafcod
 
 """
 
-import socket, re, sys
+import socket, re, sys, subprocess
 
 class trafcodLink(object):
     def __init__(self,host,port):
@@ -30,7 +30,13 @@ class trafcodLink(object):
                     self.connected = True
                     break
         except Exception:
-            print Exception.message()
+            print "Failed handshake with Trafcod: %s" % (Exception.message)
+            
+    def launchTrafcod(self,trafcodExe, configFile):
+        try:
+            sumoProcess = subprocess.Popen("%s %s trafcod://%s:%s" % (trafcodExe, configFile, self.sock.getsockname()[0], self.sock.getsockname()[1]), shell=True, stdout=sys.stdout)
+        except Exception:
+            print "Failed to launch Trafcod: %s" % (Exception.message)
             
     def sendDetectorToTrafcod(self,detectorID,state):
         stateString = ""
@@ -45,14 +51,14 @@ class trafcodLink(object):
         try:
             self.connection.sendall(message)
         except Exception:
-            print Exception.message
+            print "Failed to send detector data to TrafCod: %s" % (Exception.message)
         
     def askTrafcodToAdvance(self):
         message = "step\r\n"
         try:
             self.connection.sendall(message)
         except Exception:
-            print Exception.message
+            print "failed to advance TrafCod: %s" % (Exception.message)
         
     def recieveTrafcodLightStates(self):##//TODO make sure this function copes with \r\n and does not break until ready is received....
         dataString =""
@@ -67,7 +73,7 @@ class trafcodLink(object):
                 else:
                     break
         except Exception:
-            print Exception.message
+            print "failed to receive light data from TrafCod: %s" % (Exception.message)
             
         
         splitToJunctions = dataString.split('\r\n')
@@ -80,6 +86,11 @@ class trafcodLink(object):
                 junctionData.append((junctionID,controlString))
         
         return junctionData
+    
+    def closeTrafcod(self):
+        self.connection.close()
+        self.sock.close()
+        sys.stdout.flush()
     
     
         
